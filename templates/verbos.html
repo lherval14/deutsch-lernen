@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+{% set active = "verbos" %}
+
+{% block content %}
+<h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--navy)">
+  Conjugación de Verbos Alemanes
+</h2>
+
+<!-- ══ Buscador / selector de verbo ═══════════════════════════════ -->
+<div class="nav-row" style="margin-bottom:6px">
+
+  <!-- Campo de búsqueda con desplegable personalizado -->
+  <div class="field-wrap" style="position:relative">
+    <label>Verbo</label>
+    <input type="text" id="verbSearch" class="text-input"
+           placeholder="Escribe para buscar o toca para ver la lista..."
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+           oninput="filterVerbs(this.value)"
+           onfocus="openList()">
+
+    <!-- Lista desplegable de verbos filtrados -->
+    <div id="verbDropdown" class="verb-dropdown" style="display:none">
+      <!-- se rellena con JS -->
+    </div>
+  </div>
+
+  <button class="btn" id="btnVPrev" onclick="changeVerb(-1)" title="Anterior">◀</button>
+  <button class="btn" id="btnVNext" onclick="changeVerb(+1)" title="Siguiente">▶</button>
+  <button class="btn btn-amber" onclick="randomVerb()" title="Aleatorio">🎲</button>
+</div>
+
+<p id="vProgress" style="font-size:12px;color:var(--muted);margin-bottom:16px"></p>
+
+<!-- Tarjeta del verbo -->
+<div class="card verb-card" id="verbCard">
+  <div class="word-num"  id="vcNum">#—</div>
+  <div class="word-big"  id="vcVerb">—</div>
+  <div class="verb-bedeutung" id="vcBed"></div>
+</div>
+
+<!-- Selectores modo / tiempo -->
+<div class="g2" style="margin-bottom:12px">
+  <div>
+    <label class="detail-label" style="display:block;margin-bottom:5px">Modo verbal</label>
+    <select id="selMood" class="select-input"></select>
+  </div>
+  <div>
+    <label class="detail-label" style="display:block;margin-bottom:5px">Tiempo verbal</label>
+    <select id="selTense" class="select-input"></select>
+  </div>
+</div>
+
+<!-- Tabla de conjugación -->
+<div id="conjArea">
+  <div class="spinner" id="conjSpinner"></div>
+</div>
+
+<!-- Link a Reverso -->
+<div id="reversoLink" style="margin-top:4px;display:none">
+  <a id="reversoBtn" href="#" target="_blank" class="reverso-btn">
+    🔗 Conjugación completa en Reverso
+  </a>
+</div>
+
+<!-- ══ Edición ══════════════════════════════════════════════════ -->
+<details style="margin-top:18px">
+  <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--navy);
+                  padding:10px 14px;background:var(--card);border-radius:10px;
+                  border:1px solid var(--border);list-style:none">
+    ✏️ &nbsp;Editar este verbo
+  </summary>
+
+  <div class="card" style="margin-top:4px">
+    <div id="editSuccess" style="display:none;background:var(--green-l);
+         border:1px solid var(--green);border-radius:8px;padding:10px 14px;
+         color:var(--green);font-size:13px;margin-bottom:12px"></div>
+
+    <div class="g2" style="gap:12px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label class="detail-label" style="display:block;margin-bottom:4px">Infinitiv</label>
+          <input type="text" id="editInf" class="text-input">
+        </div>
+        <div>
+          <label class="detail-label" style="display:block;margin-bottom:4px">Bedeutung</label>
+          <textarea id="editBed" class="text-input" rows="3" style="resize:vertical"></textarea>
+        </div>
+      </div>
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:4px">Link Reverso</label>
+        <input type="text" id="editLink" class="text-input"
+               placeholder="https://conjugator.reverso.net/..."
+               oninput="updateLinkPreview()">
+        <a id="editLinkPreview" href="#" target="_blank"
+           style="font-size:12px;color:var(--blue);display:none;margin-top:4px;
+                  text-decoration:none;display:block">
+          🔗 Verificar link
+        </a>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-green btn-sm" onclick="saveEdit()">💾 Guardar</button>
+      <button class="btn btn-ghost btn-sm" onclick="discardEdit()">🗑️ Descartar</button>
+    </div>
+  </div>
+</details>
+
+<!-- ══ CSS del desplegable ════════════════════════════════════ -->
+<style>
+.verb-dropdown {
+  position: absolute; top: calc(100% + 2px); left: 0; right: 0;
+  background: var(--card);
+  border: 2px solid var(--amber);
+  border-radius: 10px;
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 200;
+  box-shadow: 0 6px 24px rgba(0,0,0,.15);
+}
+.verb-option {
+  padding: 11px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.verb-option:last-child { border-bottom: none; }
+.verb-option:hover,
+.verb-option.selected { background: #f0f4f8; }
+.verb-option .vnum {
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  min-width: 28px;
+}
+.verb-option .vmatch { color: var(--amber); }
+.verb-empty {
+  padding: 14px 16px;
+  font-size: 13px; color: var(--muted); text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Lista de verbos desde Jinja2 ───────────────────────────────
+const VERB_LIST = [
+  {% for v in verb_list %}
+  {
+    idx:       {{ loop.index0 }},
+    orden:     {{ v.orden }},
+    infinitiv: {{ v.infinitiv | tojson }},
+    bedeutung: {{ v.bedeutung | tojson }},
+    link:      {{ v.link | tojson }}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+
+const MOOD_ORDER = ['Indikativ','Konjunktiv I','Konjunktiv II','Imperativ','Partizip'];
+let currentIdx = 0;
+let conjData   = {};
+let listOpen   = false;
+
+// ── Búsqueda y filtrado ────────────────────────────────────────
+function filterVerbs(q) {
+  renderList(q.trim());
+  openList();
+}
+
+function renderList(q = '') {
+  const dropdown = document.getElementById('verbDropdown');
+  const filtered = q
+    ? VERB_LIST.filter(v => v.infinitiv.toLowerCase().includes(q.toLowerCase()))
+    : VERB_LIST;
+
+  if (filtered.length === 0) {
+    dropdown.innerHTML =
+      `<div class="verb-empty">Sin resultados para "<strong>${q}</strong>"</div>`;
+    return;
+  }
+
+  dropdown.innerHTML = filtered.slice(0, 40).map(v => {
+    // Resaltar la parte que coincide con la búsqueda
+    let label = v.infinitiv;
+    if (q) {
+      const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+      label = label.replace(re, '<span class="vmatch">$1</span>');
+    }
+    const isCurrent = v.idx === currentIdx ? ' selected' : '';
+    return `<div class="verb-option${isCurrent}" onclick="selectVerb(${v.idx})">
+              <span class="vnum">#${v.orden}</span>
+              <span>${label}</span>
+            </div>`;
+  }).join('');
+
+  // Scroll al verbo actual si está en la lista
+  setTimeout(() => {
+    const sel = dropdown.querySelector('.selected');
+    if (sel) sel.scrollIntoView({ block: 'nearest' });
+  }, 0);
+}
+
+function openList() {
+  renderList(document.getElementById('verbSearch').value.trim());
+  document.getElementById('verbDropdown').style.display = '';
+  listOpen = true;
+}
+
+function closeList() {
+  document.getElementById('verbDropdown').style.display = 'none';
+  listOpen = false;
+}
+
+function selectVerb(idx) {
+  currentIdx = idx;
+  const v = VERB_LIST[idx];
+  document.getElementById('verbSearch').value = v.infinitiv;
+  closeList();
+  updateNav();
+  loadVerb();
+}
+
+// Cerrar lista al hacer clic fuera
+document.addEventListener('click', e => {
+  const wrap = document.querySelector('.field-wrap');
+  if (wrap && !wrap.contains(e.target)) closeList();
+});
+
+// ── Navegación ◀ ▶ 🎲 ─────────────────────────────────────────
+function updateNav() {
+  document.getElementById('btnVPrev').disabled = currentIdx <= 0;
+  document.getElementById('btnVNext').disabled = currentIdx >= VERB_LIST.length - 1;
+  document.getElementById('vProgress').textContent =
+    `Verbo ${currentIdx + 1} de ${VERB_LIST.length}`;
+  // Sincronizar el texto del input de búsqueda
+  if (VERB_LIST[currentIdx]) {
+    document.getElementById('verbSearch').value = VERB_LIST[currentIdx].infinitiv;
+  }
+}
+
+function changeVerb(delta) {
+  currentIdx = Math.max(0, Math.min(VERB_LIST.length - 1, currentIdx + delta));
+  updateNav();
+  loadVerb();
+}
+
+function randomVerb() {
+  currentIdx = Math.floor(Math.random() * VERB_LIST.length);
+  updateNav();
+  loadVerb();
+}
+
+// ── Cargar conjugaciones ───────────────────────────────────────
+async function loadVerb() {
+  const v = VERB_LIST[currentIdx];
+  if (!v) return;
+
+  // Tarjeta
+  document.getElementById('vcNum').textContent   = `#${v.orden} · Infinitiv`;
+  document.getElementById('vcVerb').textContent  = v.infinitiv;
+  document.getElementById('vcBed').textContent   =
+    v.bedeutung ? '🇪🇸 ' + v.bedeutung.replace(/\*/g, '·') : '';
+
+  // Edición
+  document.getElementById('editInf').value  = v.infinitiv;
+  document.getElementById('editBed').value  = v.bedeutung;
+  document.getElementById('editLink').value = v.link;
+  document.getElementById('editSuccess').style.display = 'none';
+  updateLinkPreview();
+
+  // Limpiar conjugación
+  document.getElementById('conjArea').innerHTML = '<div class="spinner"></div>';
+  document.getElementById('reversoLink').style.display = 'none';
+  document.getElementById('selMood').innerHTML  = '';
+  document.getElementById('selTense').innerHTML = '';
+
+  // Cargar desde Reverso
+  try {
+    const params = { verb: v.infinitiv };
+    if (v.link) params.url = v.link;
+    const data = await apiGet('/api/verb/conjugations', params);
+
+    if (data._error) {
+      document.getElementById('conjArea').innerHTML =
+        `<p style="color:var(--red);font-size:13px">⚠️ ${data._error}</p>`;
+    } else {
+      conjData = data;
+      buildMoodSelector();
+    }
+  } catch (e) {
+    document.getElementById('conjArea').innerHTML =
+      '<p style="color:var(--red);font-size:13px">Error de conexión con el servidor.</p>';
+  }
+
+  // Link Reverso
+  const url = v.link || reversoUrl(v.infinitiv);
+  document.getElementById('reversoBtn').href = url;
+  document.getElementById('reversoLink').style.display = '';
+}
+
+// ── Selectores modo y tiempo ───────────────────────────────────
+function buildMoodSelector() {
+  const moods = [
+    ...MOOD_ORDER.filter(m => m in conjData),
+    ...Object.keys(conjData).filter(k => !MOOD_ORDER.includes(k) && !k.startsWith('_'))
+  ];
+  const moodSel = document.getElementById('selMood');
+  moodSel.innerHTML = moods.map(m => `<option value="${m}">${m}</option>`).join('');
+  moodSel.value = moods[0] || '';
+  buildTenseSelector();
+}
+
+function buildTenseSelector() {
+  const mood    = document.getElementById('selMood').value;
+  const tenses  = Object.keys(conjData[mood] || {});
+  const tenseSel = document.getElementById('selTense');
+  tenseSel.innerHTML = tenses.map(t => `<option value="${t}">${t}</option>`).join('');
+  tenseSel.value = tenses[0] || '';
+  renderTable();
+}
+
+document.getElementById('selMood').addEventListener('change', buildTenseSelector);
+
+// ── Tabla de conjugación ───────────────────────────────────────
+function renderTable() {
+  const mood  = document.getElementById('selMood').value;
+  const tense = document.getElementById('selTense').value;
+  const pairs = (conjData[mood] || {})[tense] || [];
+
+  if (!pairs.length) {
+    document.getElementById('conjArea').innerHTML =
+      '<p style="color:var(--muted);font-size:13px">Sin datos para esta combinación.</p>';
+    return;
+  }
+
+  const PERSONS    = ['ich','du','er / sie / es','wir','ihr','sie / Sie'];
+  const allNoPron  = pairs.every(p => !p.pron);
+  const headerHTML = allNoPron
+    ? '<tr><th>Forma</th></tr>'
+    : '<tr><th>Persona</th><th>Forma conjugada</th></tr>';
+
+  const rowsHTML = pairs.map((p, i) => {
+    if (allNoPron)
+      return `<tr><td colspan="2" style="font-weight:700;font-size:16px">${p.form}</td></tr>`;
+    const pron = p.pron || PERSONS[i] || `Pers. ${i + 1}`;
+    return `<tr><td>${pron}</td><td>${p.form}</td></tr>`;
+  }).join('');
+
+  document.getElementById('conjArea').innerHTML = `
+    <div style="margin-bottom:8px">
+      <span class="mood-badge">${mood}</span>
+      <span class="tense-badge">${tense}</span>
+    </div>
+    <div class="conj-wrap">
+      <table class="conj-table">
+        <thead>${headerHTML}</thead>
+        <tbody>${rowsHTML}</tbody>
+      </table>
+    </div>`;
+}
+
+// ── Edición ────────────────────────────────────────────────────
+function updateLinkPreview() {
+  const link = document.getElementById('editLink').value.trim();
+  const el   = document.getElementById('editLinkPreview');
+  el.style.display = link ? 'block' : 'none';
+  if (link) el.href = link;
+}
+
+async function saveEdit() {
+  const v = VERB_LIST[currentIdx];
+  const data = {
+    orden:     v.orden,
+    Infinitiv: document.getElementById('editInf').value.trim(),
+    Bedeutung: document.getElementById('editBed').value.trim(),
+    Link:      document.getElementById('editLink').value.trim(),
+  };
+  const res = await apiPost('/api/verb/save', data);
+  if (res.ok) {
+    // Actualizar datos locales para que la búsqueda refleje el cambio
+    v.infinitiv = data.Infinitiv;
+    v.bedeutung = data.Bedeutung;
+    v.link      = data.Link;
+    document.getElementById('editSuccess').textContent = '✅ Verbo actualizado correctamente.';
+    document.getElementById('editSuccess').style.display = '';
+    showToast('✅ Guardado');
+    // Actualizar el input de búsqueda con el nuevo nombre
+    document.getElementById('verbSearch').value = data.Infinitiv;
+    loadVerb();
+  } else {
+    showToast((res.errors || ['Error']).join(', '), 'err');
+  }
+}
+
+function discardEdit() {
+  const v = VERB_LIST[currentIdx];
+  document.getElementById('editInf').value  = v.infinitiv;
+  document.getElementById('editBed').value  = v.bedeutung;
+  document.getElementById('editLink').value = v.link;
+  document.getElementById('editSuccess').style.display = 'none';
+  updateLinkPreview();
+}
+
+// ── Helpers ────────────────────────────────────────────────────
+function reversoUrl(verb) {
+  return `https://conjugator.reverso.net/conjugation-german-verb-${encodeURIComponent(verb.toLowerCase())}.html`;
+}
+
+// ── Init ───────────────────────────────────────────────────────
+updateNav();
+if (VERB_LIST.length > 0) loadVerb();
+</script>
+{% endblock %}

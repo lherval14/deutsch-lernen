@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% set active = "practica" %}
+
+{% block content %}
+<h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--navy)">
+  Práctica — Número de orden
+</h2>
+
+<!-- Navegación -->
+<div class="nav-row">
+  <div class="field-wrap">
+    <label>Número de orden</label>
+    <input type="number" id="ordenInput"
+           min="{{ min_orden }}" max="{{ max_orden }}"
+           value="{{ orden }}"
+           oninput="loadWord(this.value)">
+  </div>
+  <button class="btn" id="btnPrev" onclick="changeOrden(-1)" title="Anterior">◀</button>
+  <button class="btn" id="btnNext" onclick="changeOrden(+1)" title="Siguiente">▶</button>
+  <button class="btn btn-amber" onclick="loadRandom()" title="Aleatorio">🎲</button>
+</div>
+
+<p id="progress" style="font-size:12px;color:var(--muted);margin:-10px 0 16px"></p>
+
+<!-- Tarjeta de la palabra + input del artículo -->
+<div class="g2" style="align-items:start">
+
+  <!-- Columna izquierda: palabra -->
+  <div>
+    <div class="card word-card" id="wordCard" style="min-height:100px">
+      <div class="spinner" id="wordSpinner"></div>
+    </div>
+
+    <!-- Detalles (visibles solo si el artículo es correcto) -->
+    <div id="detailsSection" style="display:none;margin-top:14px">
+      <hr class="thin">
+      <div class="g3" style="gap:10px">
+        <div>
+          <div class="detail-label">Plural nominativ</div>
+          <div id="dPlural" class="detail-val">—</div>
+        </div>
+        <div>
+          <div class="detail-label">Singular genitiv</div>
+          <div id="dGenitiv" class="detail-val">—</div>
+        </div>
+        <div>
+          <div class="detail-label">🇪🇸 Español</div>
+          <div id="dSpan" class="detail-span">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna derecha: artículo -->
+  <div>
+    <div class="detail-label" style="margin-bottom:8px">Artículo</div>
+
+    <!-- Caso normal: der / die / das -->
+    <div id="artikelSection">
+      <input type="text" id="artikelInput" class="artikel-input"
+             placeholder="der  /  die  /  das"
+             oninput="checkArtikel(this.value)"
+             autocomplete="off" autocorrect="off" autocapitalize="off">
+      <div id="artikelResult" class="result-box result-hint" style="margin-top:10px">
+        ✏️&nbsp; Escribe el artículo
+      </div>
+    </div>
+
+    <!-- Caso Eigenname -->
+    <div id="eigennameSection" style="display:none">
+      <div class="result-box" style="background:var(--blue-l);border:2px solid #93c5fd;color:#1e40af;font-size:15px">
+        📌 Eigenname — sin artículo
+      </div>
+    </div>
+
+    <!-- Caso sin artículo -->
+    <div id="noArtikelSection" style="display:none">
+      <div class="result-box result-hint">⚠️ Artículo no definido aún</div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MIN = {{ min_orden }};
+const MAX = {{ max_orden }};
+let currentOrden = {{ orden }};
+let currentWord  = null;
+
+// ── Cargar palabra ─────────────────────────────────────────────
+async function loadWord(orden) {
+  orden = Math.max(MIN, Math.min(MAX, parseInt(orden) || MIN));
+  currentOrden = orden;
+  document.getElementById('ordenInput').value = orden;
+  document.getElementById('btnPrev').disabled = orden <= MIN;
+  document.getElementById('btnNext').disabled = orden >= MAX;
+  document.getElementById('progress').textContent =
+    `Palabra ${orden} de ${MAX}`;
+
+  // Reset UI
+  resetResult();
+  document.getElementById('wordCard').innerHTML =
+    '<div class="spinner"></div>';
+
+  try {
+    const w = await apiGet(`/api/word/${orden}`);
+    currentWord = w;
+    renderWord(w);
+  } catch (e) {
+    document.getElementById('wordCard').innerHTML =
+      `<p style="color:var(--red)">Error al cargar la palabra.</p>`;
+  }
+}
+
+function renderWord(w) {
+  // Tarjeta principal
+  document.getElementById('wordCard').innerHTML = `
+    <div class="word-num">#${w.orden} · Singular nominativ</div>
+    <div class="word-big">${w.singular || '—'}</div>
+  `;
+
+  // Mostrar la sección correcta según el artículo
+  const isEigen = w.artikel === 'Eigenname';
+  const noArt   = w.artikel === '' || w.artikel === null;
+
+  document.getElementById('artikelSection').style.display   = (!isEigen && !noArt) ? '' : 'none';
+  document.getElementById('eigennameSection').style.display  = isEigen ? '' : 'none';
+  document.getElementById('noArtikelSection').style.display  = noArt   ? '' : 'none';
+
+  // Eigenname o sin artículo: mostrar detalles de inmediato
+  if (isEigen || noArt) showDetails(w);
+
+  // Limpiar input del artículo
+  const inp = document.getElementById('artikelInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+}
+
+// ── Verificar artículo ─────────────────────────────────────────
+function checkArtikel(value) {
+  if (!currentWord) return;
+  const input    = value.trim().toLowerCase();
+  const correct  = (currentWord.artikel || '').toLowerCase();
+  const resultEl = document.getElementById('artikelResult');
+
+  if (!input) {
+    resultEl.className = 'result-box result-hint';
+    resultEl.innerHTML = '✏️&nbsp; Escribe el artículo';
+    document.getElementById('detailsSection').style.display = 'none';
+    return;
+  }
+
+  if (input === correct) {
+    resultEl.className = 'result-box result-ok';
+    resultEl.innerHTML = `✅ &nbsp; ${currentWord.artikel}`;
+    showDetails(currentWord);
+  } else {
+    resultEl.className = 'result-box result-err';
+    resultEl.innerHTML = `❌ &nbsp;"${value.trim()}" — Incorrecto`;
+    document.getElementById('detailsSection').style.display = 'none';
+  }
+}
+
+// ── Mostrar detalles ───────────────────────────────────────────
+function showDetails(w) {
+  const sv = [w.span1, w.span2, w.span3].filter(Boolean).join(' ; ');
+  document.getElementById('dPlural').textContent  = w.plural  || '— no registrado —';
+  document.getElementById('dGenitiv').textContent = w.genitiv || '— no registrado —';
+  document.getElementById('dSpan').textContent    = sv        || '— sin traducción —';
+  document.getElementById('detailsSection').style.display = '';
+}
+
+// ── Navegación ─────────────────────────────────────────────────
+function changeOrden(delta) {
+  loadWord(currentOrden + delta);
+}
+
+async function loadRandom() {
+  const data = await apiGet('/api/word/random');
+  loadWord(data.orden);
+}
+
+function resetResult() {
+  document.getElementById('detailsSection').style.display = 'none';
+  const r = document.getElementById('artikelResult');
+  if (r) {
+    r.className = 'result-box result-hint';
+    r.innerHTML = '✏️&nbsp; Escribe el artículo';
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────
+loadWord(currentOrden);
+</script>
+{% endblock %}

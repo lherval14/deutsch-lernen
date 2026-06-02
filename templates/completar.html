@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% set active = "completar" %}
+
+{% block content %}
+<h2 style="font-size:15px;font-weight:700;margin-bottom:4px;color:var(--navy)">
+  Completar celdas vacías
+</h2>
+
+<!-- Contadores -->
+<p id="emptyCount" style="font-size:12px;color:var(--muted);margin-bottom:20px">
+  Cargando...
+</p>
+
+<!-- ══ MODO A: Manual ══════════════════════════════════════════ -->
+<details open>
+  <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--navy);
+                  padding:12px 16px;background:var(--card);border-radius:10px;
+                  border:1px solid var(--border);list-style:none;display:flex;
+                  align-items:center;gap:8px;margin-bottom:8px">
+    ✏️ &nbsp;Completar por número de orden y columna
+  </summary>
+
+  <div class="card" style="margin-top:4px">
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">
+          Número de orden
+        </label>
+        <input type="number" id="manOrden" class="text-input"
+               placeholder="Ej: 15" min="1" oninput="loadManualWord()">
+      </div>
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">
+          Columna a completar
+        </label>
+        <select id="manCol" class="select-input" onchange="loadManualWord()">
+          {% for col in fill_cols %}
+          <option value="{{ col }}">{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Tarjeta de la palabra seleccionada -->
+    <div id="manWordCard" style="display:none" class="card"
+         style="background:#f7f5f0;border-color:#ddd9d0;margin-bottom:12px;padding:14px 18px">
+    </div>
+
+    <div id="manInputSection" style="display:none">
+      <label class="detail-label" style="display:block;margin-bottom:5px" id="manInputLabel">
+        Nuevo valor
+      </label>
+      <input type="text" id="manValue" class="text-input"
+             placeholder="Escribe aquí el valor..." style="margin-bottom:10px">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green btn-sm" onclick="saveManual()" id="btnSaveMan">
+          💾 Guardar
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="clearManual()">
+          🗑️ Limpiar
+        </button>
+      </div>
+    </div>
+  </div>
+</details>
+
+<!-- ══ MODO B: Navegar automáticamente ══════════════════════════ -->
+<details>
+  <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--navy);
+                  padding:12px 16px;background:var(--card);border-radius:10px;
+                  border:1px solid var(--border);list-style:none;display:flex;
+                  align-items:center;gap:8px;margin-bottom:8px;margin-top:10px">
+    🔄 &nbsp;Navegar por celdas vacías
+  </summary>
+
+  <div class="card" style="margin-top:4px">
+    <!-- Navegación -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <button class="btn" id="navPrev" onclick="navEmpty(-1)" disabled>◀</button>
+      <button class="btn" id="navNext" onclick="navEmpty(+1)">▶</button>
+      <button class="btn btn-amber" onclick="navRandom()">🎲</button>
+      <span id="navProgress" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+
+    <!-- Tarjeta -->
+    <div id="navWordCard" class="card"
+         style="background:#f7f5f0;border-color:#ddd9d0;padding:14px 18px;margin-bottom:12px">
+      <div class="spinner"></div>
+    </div>
+
+    <label class="detail-label" id="navInputLabel" style="display:block;margin-bottom:5px"></label>
+    <input type="text" id="navValue" class="text-input"
+           placeholder="Escribe aquí el valor..." style="margin-bottom:10px">
+    <button class="btn btn-green btn-sm" onclick="saveNav()" id="btnSaveNav">
+      💾 Guardar en Excel
+    </button>
+  </div>
+</details>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let emptyList  = [];
+let navIdx     = 0;
+let manWord    = null;
+
+// ── Cargar lista de celdas vacías ──────────────────────────────
+async function loadEmpty() {
+  emptyList = await apiGet('/api/empty_cells');
+  const total = emptyList.length;
+  document.getElementById('emptyCount').textContent =
+    total === 0
+      ? '🎉 ¡Diccionario completo! No hay celdas vacías.'
+      : `Celdas vacías encontradas: ${total}`;
+  navIdx = 0;
+  renderNav();
+}
+
+// ── MODO A: Manual ─────────────────────────────────────────────
+async function loadManualWord() {
+  const orden = parseInt(document.getElementById('manOrden').value);
+  const col   = document.getElementById('manCol').value;
+  if (!orden || orden < 1) {
+    document.getElementById('manWordCard').style.display = 'none';
+    document.getElementById('manInputSection').style.display = 'none';
+    return;
+  }
+  try {
+    const w = await apiGet(`/api/word/${orden}`);
+    manWord = w;
+    const art    = w.artikel && w.artikel !== 'Eigenname' ? w.artikel + ' ' : '';
+    const curVal = w[colToKey(col)] || '';
+    const badge  = curVal
+      ? `<span style="background:var(--green-l);color:var(--green);font-size:10px;
+           font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px">
+           actual: ${curVal}</span>`
+      : `<span class="badge-empty" style="margin-left:6px">sin valor</span>`;
+
+    document.getElementById('manWordCard').style.display = '';
+    document.getElementById('manWordCard').innerHTML = `
+      <div class="word-num">#${w.orden}</div>
+      <div class="word-big" style="font-size:24px">${art}${w.singular}</div>
+      <div style="margin-top:8px">
+        <span class="col-tag">${col}</span>${badge}
+      </div>`;
+    document.getElementById('manInputSection').style.display = '';
+    document.getElementById('manInputLabel').textContent =
+      curVal ? `Nuevo valor para "${col}" (actual: "${curVal}"):` : `Valor para "${col}":`;
+    document.getElementById('manValue').placeholder =
+      curVal ? `Actual: "${curVal}" — escribe para sobreescribir` : 'Escribe el valor...';
+  } catch (e) {
+    document.getElementById('manWordCard').style.display = '';
+    document.getElementById('manWordCard').innerHTML =
+      `<p style="color:var(--red)">Orden ${orden} no encontrado.</p>`;
+    document.getElementById('manInputSection').style.display = 'none';
+  }
+}
+
+async function saveManual() {
+  const orden = parseInt(document.getElementById('manOrden').value);
+  const col   = document.getElementById('manCol').value;
+  const val   = document.getElementById('manValue').value.trim();
+  if (!val) { showToast('Escribe un valor primero', 'err'); return; }
+  const res = await apiPost('/api/word/save', { orden, column: col, value: val });
+  if (res.ok) {
+    showToast(`✅ Guardado: "${col}" → "${val}"`);
+    document.getElementById('manValue').value = '';
+    loadEmpty();
+    loadManualWord();
+  } else {
+    showToast(res.msg, 'err');
+  }
+}
+
+function clearManual() {
+  document.getElementById('manValue').value = '';
+  document.getElementById('manOrden').value = '';
+  document.getElementById('manWordCard').style.display = 'none';
+  document.getElementById('manInputSection').style.display = 'none';
+}
+
+// ── MODO B: Navegación automática ──────────────────────────────
+function renderNav() {
+  const total = emptyList.length;
+  if (total === 0) {
+    document.getElementById('navWordCard').innerHTML =
+      '<p style="color:var(--green)">🎉 No hay celdas vacías.</p>';
+    document.getElementById('navInputLabel').textContent = '';
+    document.getElementById('navValue').style.display = 'none';
+    document.getElementById('btnSaveNav').style.display = 'none';
+    return;
+  }
+  navIdx = Math.max(0, Math.min(navIdx, total - 1));
+  const e   = emptyList[navIdx];
+  const art = e.artikel && e.artikel !== 'Eigenname' ? e.artikel + ' ' : '';
+
+  document.getElementById('navProgress').textContent =
+    `Celda ${navIdx + 1} de ${total}`;
+  document.getElementById('navPrev').disabled = navIdx === 0;
+  document.getElementById('navNext').disabled = navIdx >= total - 1;
+  document.getElementById('navWordCard').innerHTML = `
+    <div class="word-num">#${e.orden}</div>
+    <div class="word-big" style="font-size:24px">${art}${e.singular}</div>
+    <div style="margin-top:8px">
+      <span class="col-tag">${e.columna}</span>
+      <span class="badge-empty" style="margin-left:6px">sin valor</span>
+    </div>`;
+  document.getElementById('navInputLabel').textContent =
+    `Valor para "${e.columna}":`;
+  document.getElementById('navValue').value = '';
+  document.getElementById('navValue').placeholder =
+    `Escribe el valor para "${e.columna}"...`;
+  document.getElementById('navValue').style.display = '';
+  document.getElementById('btnSaveNav').style.display = '';
+}
+
+function navEmpty(delta) {
+  navIdx += delta;
+  renderNav();
+}
+
+function navRandom() {
+  if (emptyList.length === 0) return;
+  navIdx = Math.floor(Math.random() * emptyList.length);
+  renderNav();
+}
+
+async function saveNav() {
+  const e   = emptyList[navIdx];
+  const val = document.getElementById('navValue').value.trim();
+  if (!val) { showToast('Escribe un valor primero', 'err'); return; }
+  const res = await apiPost('/api/word/save',
+                            { orden: e.orden, column: e.columna, value: val });
+  if (res.ok) {
+    showToast(`✅ Guardado: "${e.columna}" → "${val}"`);
+    await loadEmpty();   // recargar lista
+    renderNav();
+  } else {
+    showToast(res.msg, 'err');
+  }
+}
+
+// ── Mapear nombre de columna a key del objeto word ─────────────
+function colToKey(col) {
+  const map = {
+    'Artikel': 'artikel', 'Plural nominativ': 'plural',
+    'Singular genitiv': 'genitiv',
+    'Spanisch 1': 'span1', 'Spanisch 2': 'span2', 'Spanisch 3': 'span3'
+  };
+  return map[col] || col.toLowerCase();
+}
+
+// ── Init ───────────────────────────────────────────────────────
+loadEmpty();
+</script>
+{% endblock %}

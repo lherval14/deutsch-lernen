@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1a2e4a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>🇩🇪 Deutsch Lernen</title>
+<style>
+/* ── Variables ─────────────────────────────────────────────────── */
+:root {
+  --navy:   #1a2e4a;
+  --amber:  #e07b27;
+  --bg:     #f4f3ef;
+  --card:   #ffffff;
+  --border: #e2ded6;
+  --green:  #1f8c4e;  --green-l: #d4f0e2;
+  --red:    #b92b2b;  --red-l:   #fde8e8;
+  --yellow: #a07800;  --yellow-l:#fef9c3;
+  --blue:   #1e6fa5;  --blue-l:  #dbeeff;
+  --muted:  #707a8a;
+  --radius: 12px;
+  --shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+/* ── Reset ─────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--navy);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.app-header {
+  background: var(--navy);
+  color: #fff;
+  padding: 14px 20px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.app-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  margin-bottom: 12px;
+}
+
+/* ── Tab navigation ────────────────────────────────────────────── */
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab {
+  white-space: nowrap;
+  padding: 8px 16px;
+  color: rgba(255,255,255,.55);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px 8px 0 0;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.nav-tab:hover  { color: rgba(255,255,255,.85); background: rgba(255,255,255,.07); }
+.nav-tab.active { color: #fff; background: var(--bg); color: var(--navy); }
+
+/* ── Content area ──────────────────────────────────────────────── */
+.content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+
+/* ── Word display ──────────────────────────────────────────────── */
+.word-card { text-align: center; }
+.word-num  { font-size: 11px; font-weight: 700; color: var(--muted);
+             text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.word-big  { font-size: 36px; font-weight: 800; color: var(--navy); line-height: 1.1; }
+
+/* ── Result boxes ──────────────────────────────────────────────── */
+.result-box {
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.result-ok   { background: var(--green-l); border: 2px solid #059669; color: #064e3b; }
+.result-err  { background: var(--red-l);   border: 2px solid #dc2626; color: #7f1d1d; font-size:16px; }
+.result-hint { background: #f9fafb; border: 2px dashed #d1d5db; color: var(--muted);
+               font-size: 14px; font-weight: 400; }
+
+/* ── Detail labels ─────────────────────────────────────────────── */
+.detail-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 5px;
+}
+.detail-val {
+  font-size: 17px; font-weight: 700; color: var(--navy);
+  background: #f0f4f8; padding: 8px 14px; border-radius: 8px;
+  border-left: 3px solid var(--navy);
+}
+.detail-span {
+  font-size: 15px; font-weight: 600; color: #374151;
+  background: var(--yellow-l); padding: 8px 14px; border-radius: 8px;
+  border-left: 3px solid #d97706;
+}
+.detail-empty { font-size: 12px; color: #d1d5db; font-style: italic; padding: 8px 0; }
+
+/* ── Badges ────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.badge-ok    { background: var(--green-l); color: var(--green); }
+.badge-warn  { background: var(--yellow-l); color: var(--yellow); }
+.badge-crit  { background: var(--red-l); color: var(--red); }
+.badge-blue  { background: var(--blue-l); color: var(--blue); }
+.badge-empty { background: var(--red-l); color: var(--red); font-size:10px; }
+.col-tag {
+  background: #e0e7ff; color: #3730a3;
+  font-size: 10px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 20px;
+}
+
+/* ── Grid ──────────────────────────────────────────────────────── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media(max-width:600px){ .g2,.g3{ grid-template-columns:1fr; } }
+
+/* ── Navigation buttons ────────────────────────────────────────── */
+.nav-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 20px; }
+.nav-row .field-wrap { flex: 1; }
+.nav-row label { font-size: 11px; font-weight: 700; color: var(--muted);
+                 text-transform: uppercase; letter-spacing: .8px; display:block;
+                 margin-bottom: 5px; }
+.nav-row input[type=number] {
+  width: 100%; padding: 10px 12px; border-radius: 8px;
+  border: 1.5px solid var(--border); font-size: 16px; font-weight: 700;
+  color: var(--navy); background: var(--card); outline: none;
+}
+.nav-row input[type=number]:focus { border-color: var(--amber); }
+.btn {
+  padding: 10px 16px; border-radius: 8px; border: none;
+  font-size: 18px; font-weight: 600; cursor: pointer;
+  background: var(--navy); color: #fff;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn:hover { background: #243a59; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-sm   { padding: 7px 12px; font-size: 14px; border-radius: 7px; }
+.btn-amber{ background: var(--amber); }
+.btn-amber:hover{ background: #c06a20; }
+.btn-green{ background: var(--green); }
+.btn-red  { background: var(--red); }
+.btn-ghost{ background: transparent; border: 1.5px solid var(--border);
+            color: var(--navy); font-size:14px; }
+.btn-ghost:hover{ background: var(--border); }
+
+/* ── Text inputs ───────────────────────────────────────────────── */
+.text-input {
+  width: 100%; padding: 10px 14px; border-radius: 8px;
+  border: 1.5px solid var(--border); font-size: 15px;
+  color: var(--navy); background: var(--card); outline: none;
+  transition: border-color .15s;
+}
+.text-input:focus { border-color: var(--amber); }
+.select-input {
+  width: 100%; padding: 9px 12px; border-radius: 8px;
+  border: 1.5px solid var(--border); font-size: 14px;
+  color: var(--navy); background: var(--card);
+  appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23707a8a' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  padding-right: 36px;
+}
+
+/* ── Article big input ─────────────────────────────────────────── */
+.artikel-input {
+  width: 100%; padding: 14px; border-radius: 10px;
+  border: 2px solid var(--border); font-size: 22px;
+  font-weight: 700; text-align: center; color: var(--navy);
+  background: var(--card); outline: none; transition: border-color .15s;
+  -webkit-appearance: none;
+}
+.artikel-input:focus { border-color: var(--amber); }
+
+/* ── Verb conjugation table ────────────────────────────────────── */
+.conj-wrap { background: var(--card); border: 1.5px solid var(--border);
+             border-radius: var(--radius); overflow: hidden; margin-top: 12px; }
+.conj-table { width: 100%; border-collapse: collapse; }
+.conj-table thead th {
+  background: var(--navy); color: #fff; padding: 10px 18px;
+  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .6px;
+}
+.conj-table tbody td {
+  padding: 10px 18px; border-bottom: 1px solid var(--border); font-size: 15px;
+}
+.conj-table tbody tr:last-child td { border-bottom: none; }
+.conj-table tbody td:first-child { color: var(--muted); font-size: 13px; width: 36%; }
+.conj-table tbody td:last-child  { font-weight: 700; }
+.mood-badge  { display:inline-block; background:#e0e7ff; color:#3730a3;
+               font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+.tense-badge { display:inline-block; background:var(--green-l); color:var(--green);
+               font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; margin-left:6px; }
+
+/* ── Search result cards ───────────────────────────────────────── */
+.search-card { background: var(--card); border: 1.5px solid var(--border);
+               border-radius: 10px; padding: 13px 16px; margin-bottom: 10px; }
+.search-word { font-size: 20px; font-weight: 800; color: var(--navy); }
+.search-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+.search-span { display:inline-block; background:var(--yellow-l);
+               padding:3px 10px; border-radius:6px;
+               border-left:3px solid #d97706; font-size:13px;
+               color:#374151; margin-top:6px; margin-right:5px; }
+
+/* ── Divider ───────────────────────────────────────────────────── */
+hr.thin { border:none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+/* ── Toast / alerts ────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--navy); color: #fff; padding: 12px 24px;
+  border-radius: 30px; font-size: 14px; font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  z-index: 999; opacity: 0; transition: opacity .3s;
+  max-width: 90vw; text-align: center;
+}
+.toast.show { opacity: 1; }
+.toast.ok   { background: var(--green); }
+.toast.err  { background: var(--red); }
+
+/* ── Spinner ───────────────────────────────────────────────────── */
+.spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid rgba(26,46,74,.15);
+  border-top-color: var(--navy);
+  animation: spin .7s linear infinite;
+  margin: 16px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Reverso link button ───────────────────────────────────────── */
+.reverso-btn {
+  display: inline-block; background: var(--navy); color: #fff;
+  padding: 9px 20px; border-radius: 8px; font-weight: 600;
+  font-size: 13px; text-decoration: none; margin-top: 14px;
+}
+.reverso-btn:hover { background: var(--amber); }
+
+/* ── Verb card ─────────────────────────────────────────────────── */
+.verb-card { padding: 16px 22px; }
+.verb-bedeutung { font-size: 14px; color: var(--muted); margin-top: 7px; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-title">🇩🇪 Deutsch Lernen</div>
+  <nav class="nav-tabs">
+    <a href="/practica" class="nav-tab {% if active=='practica' %}active{% endif %}">📚 Práctica</a>
+    <a href="/completar" class="nav-tab {% if active=='completar' %}active{% endif %}">✏️ Completar</a>
+    <a href="/buscar"    class="nav-tab {% if active=='buscar'    %}active{% endif %}">🔍 Buscar</a>
+    <a href="/verbos"    class="nav-tab {% if active=='verbos'    %}active{% endif %}">📋 Verbos</a>
+  </nav>
+</header>
+
+<main class="content">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- Toast notification -->
+<div id="toast" class="toast"></div>
+
+<script>
+/* ── Shared utilities ──────────────────────────────────────────── */
+
+// Show toast notification
+function showToast(msg, type = 'ok', duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = 'toast', duration);
+}
+
+// Generic API helper
+async function api(url, options = {}) {
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// GET with query params
+function apiGet(url, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return api(qs ? `${url}?${qs}` : url);
+}
+
+// POST with JSON body
+function apiPost(url, body = {}) {
+  return api(url, { method: 'POST', body: JSON.stringify(body) });
+}
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

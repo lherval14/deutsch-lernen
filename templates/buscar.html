@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+{% set active = "buscar" %}
+
+{% block content %}
+<h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--navy)">
+  Buscador
+</h2>
+
+<!-- Sub-tabs -->
+<div style="display:flex;gap:6px;margin-bottom:18px;border-bottom:2px solid var(--border);padding-bottom:0">
+  <button class="subtab active" id="tab-es" onclick="switchTab('es')">🔍 Español → Alemán</button>
+  <button class="subtab" id="tab-de" onclick="switchTab('de')">🔍 Alemán → Español</button>
+  <button class="subtab" id="tab-add" onclick="switchTab('add')">➕ Nueva palabra</button>
+</div>
+
+<!-- ══ Panel: Español → Alemán ══════════════════════════════════ -->
+<div id="panel-es" class="panel">
+  <div style="margin-bottom:16px">
+    <label class="detail-label" style="display:block;margin-bottom:6px">
+      Palabra en español
+    </label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="queryEs" class="text-input"
+             placeholder="Ej: hora, número, mar..."
+             oninput="searchEs(this.value)">
+      <button class="btn btn-amber" onclick="searchEs(document.getElementById('queryEs').value)">
+        🔍
+      </button>
+    </div>
+  </div>
+  <div id="resultsEs"></div>
+</div>
+
+<!-- ══ Panel: Alemán → Español ══════════════════════════════════ -->
+<div id="panel-de" class="panel" style="display:none">
+  <div style="margin-bottom:16px">
+    <label class="detail-label" style="display:block;margin-bottom:6px">
+      Palabra en alemán
+    </label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="queryDe" class="text-input"
+             placeholder="Ej: See, Stunde, Name..."
+             oninput="searchDe(this.value)">
+      <button class="btn btn-amber" onclick="searchDe(document.getElementById('queryDe').value)">
+        🔍
+      </button>
+    </div>
+  </div>
+  <div id="resultsDe"></div>
+</div>
+
+<!-- ══ Panel: Agregar nueva palabra ════════════════════════════ -->
+<div id="panel-add" class="panel" style="display:none">
+  <div id="addSuccessMsg" style="display:none" class="card"
+       style="background:var(--green-l);border-color:var(--green)"></div>
+
+  <div class="g2" style="gap:14px">
+    <!-- Columna izquierda -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">Artikel</label>
+        <select id="nwArtikel" class="select-input">
+          <option value="">— sin artículo —</option>
+          <option value="der">der</option>
+          <option value="die">die</option>
+          <option value="das">das</option>
+          <option value="Eigenname">Eigenname</option>
+        </select>
+      </div>
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">
+          Singular nominativ <span style="color:var(--red)">*</span>
+        </label>
+        <input type="text" id="nwSingular" class="text-input"
+               placeholder="Ej: Stunde, See, Name..." oninput="updatePreview()">
+      </div>
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">Plural nominativ</label>
+        <input type="text" id="nwPlural" class="text-input" placeholder="Ej: Stunden">
+      </div>
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">Singular genitiv</label>
+        <input type="text" id="nwGenitiv" class="text-input" placeholder="Ej: Stunde">
+      </div>
+    </div>
+
+    <!-- Columna derecha -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">
+          Spanisch 1 <span style="color:var(--red)">*</span>
+        </label>
+        <input type="text" id="nwSpan1" class="text-input"
+               placeholder="Traducción principal" oninput="updatePreview()">
+      </div>
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">Spanisch 2</label>
+        <input type="text" id="nwSpan2" class="text-input" placeholder="Segunda traducción">
+      </div>
+      <div>
+        <label class="detail-label" style="display:block;margin-bottom:5px">Spanisch 3</label>
+        <input type="text" id="nwSpan3" class="text-input" placeholder="Tercera traducción">
+      </div>
+
+      <!-- Vista previa -->
+      <div id="addPreview" style="display:none" class="search-card">
+        <div class="word-num" id="pvNum">Vista previa</div>
+        <div id="pvWord" class="search-word"></div>
+        <div id="pvSpan" class="search-span" style="margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:11px;color:var(--muted);margin:10px 0 6px">
+    <span style="color:var(--red)">*</span> Campos obligatorios
+  </p>
+
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-green" id="btnAddWord" onclick="addWord()" disabled>
+      💾 Agregar al diccionario
+    </button>
+    <button class="btn btn-ghost" onclick="clearAddForm()">
+      🗑️ Limpiar
+    </button>
+  </div>
+</div>
+
+<style>
+.subtab {
+  padding: 8px 14px; border: none; background: transparent;
+  color: var(--muted); font-size: 13px; font-weight: 600;
+  cursor: pointer; border-bottom: 3px solid transparent;
+  margin-bottom: -2px; border-radius: 6px 6px 0 0;
+  transition: all .15s;
+}
+.subtab:hover { color: var(--navy); }
+.subtab.active { color: var(--navy); border-bottom-color: var(--amber); background: rgba(224,123,39,.06); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Sub-tab switching ──────────────────────────────────────────
+function switchTab(name) {
+  ['es','de','add'].forEach(t => {
+    document.getElementById(`panel-${t}`).style.display = t === name ? '' : 'none';
+    document.getElementById(`tab-${t}`).className =
+      'subtab' + (t === name ? ' active' : '');
+  });
+}
+
+// ── Buscador Español → Alemán ──────────────────────────────────
+let esTimer;
+function searchEs(q) {
+  clearTimeout(esTimer);
+  if (!q.trim()) { document.getElementById('resultsEs').innerHTML = ''; return; }
+  esTimer = setTimeout(async () => {
+    const items = await apiGet('/api/search/es', { q });
+    const el = document.getElementById('resultsEs');
+    if (!items.length) {
+      el.innerHTML = `<p style="color:var(--muted);font-size:13px">
+        Sin resultados para "<strong>${q}</strong>".</p>`;
+      return;
+    }
+    el.innerHTML = `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">
+      ${items.length} resultado(s):</p>` +
+      items.map(r => {
+        const art = r.artikel && r.artikel !== 'Eigenname' ? r.artikel + ' ' : '';
+        const pl  = r.plural  ? `Pl: <em>${r.plural}</em>` : '';
+        const gen = r.genitiv ? ` · Gen: <em>${r.genitiv}</em>` : '';
+        return `<div class="search-card">
+          <div class="word-num">#${r.orden}</div>
+          <div class="search-word">${art}${r.singular}</div>
+          <div class="search-meta">${pl}${gen}</div>
+          <span class="search-span">🇪🇸 ${r.span}</span>
+        </div>`;
+      }).join('');
+  }, 300);
+}
+
+// ── Buscador Alemán → Español ──────────────────────────────────
+let deTimer;
+function searchDe(q) {
+  clearTimeout(deTimer);
+  if (!q.trim()) { document.getElementById('resultsDe').innerHTML = ''; return; }
+  deTimer = setTimeout(async () => {
+    const items = await apiGet('/api/search/de', { q });
+    const el = document.getElementById('resultsDe');
+    if (!items.length) {
+      el.innerHTML = `<p style="color:var(--muted);font-size:13px">
+        Sin resultados para "<strong>${q}</strong>".</p>`;
+      return;
+    }
+    el.innerHTML = `<p style="font-size:12px;color:var(--muted);margin-bottom:10px">
+      ${items.length} resultado(s):</p>` +
+      items.map(r => {
+        const art    = r.artikel && r.artikel !== 'Eigenname' ? r.artikel + ' ' : '';
+        const pl     = r.plural  ? `Pl: <em>${r.plural}</em>` : '';
+        const gen    = r.genitiv ? ` · Gen: <em>${r.genitiv}</em>` : '';
+        const badges = (r.translations || [])
+          .map(t => `<span class="search-span">🇪🇸 ${t}</span>`).join(' ');
+        return `<div class="search-card">
+          <div class="word-num">#${r.orden}</div>
+          <div class="search-word">${art}${r.singular}</div>
+          <div class="search-meta">${pl}${gen}</div>
+          <div style="margin-top:6px">${badges || '<em style="color:var(--muted)">sin traducción</em>'}</div>
+        </div>`;
+      }).join('');
+  }, 300);
+}
+
+// ── Agregar nueva palabra ──────────────────────────────────────
+function updatePreview() {
+  const sing  = document.getElementById('nwSingular').value.trim();
+  const span1 = document.getElementById('nwSpan1').value.trim();
+  const art   = document.getElementById('nwArtikel').value;
+  const btn   = document.getElementById('btnAddWord');
+
+  btn.disabled = !(sing && span1);
+
+  if (sing) {
+    const artDisp = art && art !== 'Eigenname' ? art + ' ' : '';
+    const sv = [span1,
+                document.getElementById('nwSpan2').value.trim(),
+                document.getElementById('nwSpan3').value.trim()]
+               .filter(Boolean).join(' ; ');
+    document.getElementById('addPreview').style.display = '';
+    document.getElementById('pvWord').textContent = artDisp + sing;
+    document.getElementById('pvSpan').textContent = sv ? '🇪🇸 ' + sv : '';
+  } else {
+    document.getElementById('addPreview').style.display = 'none';
+  }
+}
+
+async function addWord() {
+  const fields = {
+    'Artikel':            document.getElementById('nwArtikel').value.trim(),
+    'Singular nominativ': document.getElementById('nwSingular').value.trim(),
+    'Plural nominativ':   document.getElementById('nwPlural').value.trim(),
+    'Singular genitiv':   document.getElementById('nwGenitiv').value.trim(),
+    'Spanisch 1':         document.getElementById('nwSpan1').value.trim(),
+    'Spanisch 2':         document.getElementById('nwSpan2').value.trim(),
+    'Spanisch 3':         document.getElementById('nwSpan3').value.trim(),
+  };
+  const res = await apiPost('/api/word/add', fields);
+  if (res.ok) {
+    showToast(`✅ Palabra agregada con orden #${res.orden}`);
+    clearAddForm();
+  } else {
+    showToast(res.msg || 'Error al guardar', 'err');
+  }
+}
+
+function clearAddForm() {
+  ['nwArtikel','nwSingular','nwPlural','nwGenitiv','nwSpan1','nwSpan2','nwSpan3']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el.tagName === 'SELECT') el.selectedIndex = 0;
+      else el.value = '';
+    });
+  document.getElementById('addPreview').style.display = 'none';
+  document.getElementById('btnAddWord').disabled = true;
+}
+</script>
+{% endblock %}
